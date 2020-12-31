@@ -168,6 +168,7 @@ func NewAnonServer(id int64, datadir string) (s *Server, err error) {
 	s.Channels[0] = NewChannel(0, "Root")
 	s.nextChanId = 1
 	s.i2p = true
+	s.Config.Set("I2P", "true")
 
 	s.Logger = log.New(logtarget.Default, fmt.Sprintf("[%v] ", s.Id), log.LstdFlags|log.Lmicroseconds)
 
