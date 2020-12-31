@@ -314,13 +314,9 @@ func (server *Server) handleIncomingClient(conn net.Conn) (err error) {
 	client.session = server.pool.Get()
 	client.Printf("New connection: %v (%v)", conn.RemoteAddr(), client.Session())
 
-	switch addr.(type) {
-	case *net.TCPAddr:
-		client.StreamAddr = addr.(*net.TCPAddr)
-	case i2pkeys.I2PAddr:
-		client.StreamAddr = addr.(i2pkeys.I2PAddr)
-	case i2pkeys.I2PKeys:
-		client.StreamAddr = addr.(i2pkeys.I2PKeys)
+	err = client.SetStreamAddr(addr)
+	if err != nil {
+		return
 	}
 	client.server = server
 	client.conn = conn

@@ -10,6 +10,7 @@ import (
 	"crypto/tls"
 	"encoding/binary"
 	"errors"
+	"fmt"
 	"io"
 	"log"
 	"net"
@@ -18,7 +19,7 @@ import (
 	//	"os"
 
 	"github.com/eyedeekay/sam3"
-	"github.com/eyedeekay/sam3/helper"
+	//	"github.com/eyedeekay/sam3/helper"
 	"github.com/eyedeekay/sam3/i2pkeys"
 
 	"github.com/eyedeekay/jumble/pkg/acl"
@@ -179,83 +180,33 @@ func (client *Client) Panicf(format string, v ...interface{}) {
 	client.Disconnect()
 }
 
-func (client *Client) ListenDatagram(addr net.Addr) (net.PacketConn, error) {
-	switch addr.(type) {
+func (client *Client) SetDatagramAddr(addr net.Addr) error {
+	switch t := addr.(type) {
+	case i2pkeys.I2PAddr:
+		client.PacketAddr = addr
 	case i2pkeys.I2PKeys:
-		return client.SAM.NewDatagramSession("mumble-i2p", addr.(i2pkeys.I2PKeys), sam3.Options_Humongous, 0)
+		client.PacketAddr = addr
+	case *net.UDPAddr:
+		client.PacketAddr = addr
 	default:
-		return net.ListenUDP("udp", addr.(*net.UDPAddr))
+		return fmt.Errorf("Wrong address type %s", t)
 	}
+	return fmt.Errorf("Wrong address type %s", addr)
 }
 
-func (client *Client) ListenStream(addr net.Addr) (net.Listener, error) {
-	switch addr.(type) {
+func (client *Client) SetStreamAddr(addr net.Addr) error {
+	switch t := addr.(type) {
+	case i2pkeys.I2PAddr:
+		client.StreamAddr = addr
 	case i2pkeys.I2PKeys:
-		return sam.I2PListener("mumble-web", "127.0.0.1:7656", "mumble-i2p")
+		client.StreamAddr = addr
+	case *net.TCPAddr:
+		client.StreamAddr = addr
 	default:
-		return net.ListenTCP("tcp", addr.(*net.TCPAddr))
+		return fmt.Errorf("Wrong address type %s", t)
 	}
+	return fmt.Errorf("Wrong address type %s", addr)
 }
-
-/*func (client *Client) DatagramAddr() net.Addr {
-	if client.i2p {
-		if _, err := os.Stat(client.i2pkeys + ".datagram.i2p.private"); os.IsNotExist(err) {
-			f, err := os.Create(client.i2pkeys + ".datagram.i2p.private")
-			if err != nil {
-				log.Fatalf("unable to open I2P keyfile for writing: %s", err)
-			}
-			defer f.Close()
-			tkeys, err := client.SAM.NewKeys()
-			if err != nil {
-				log.Fatalf("unable to generate I2P Keys, %s", err)
-			}
-			keys := &tkeys
-			err = i2pkeys.StoreKeysIncompat(*keys, f)
-			if err != nil {
-				log.Fatalf("unable to save newly generated I2P Keys, %s", err)
-			}
-			return keys
-		} else {
-			tkeys, err := i2pkeys.LoadKeys(client.i2pkeys + ".datagram.i2p.private")
-			if err != nil {
-				log.Fatalf("unable to load I2P Keys: %e", err)
-			}
-			keys := &tkeys
-			return keys
-		}
-	}
-	return &net.UDPAddr{IP: net.ParseIP(client.HostAddress()), Port: client.Port()}
-}
-
-func (client *Client) StreamAddr() net.Addr {
-	if client.i2p {
-		if _, err := os.Stat(client.i2pkeys + ".stream.i2p.private"); os.IsNotExist(err) {
-			f, err := os.Create(client.i2pkeys + ".stream.i2p.private")
-			if err != nil {
-				log.Fatalf("unable to open I2P keyfile for writing: %s", err)
-			}
-			defer f.Close()
-			tkeys, err := client.SAM.NewKeys()
-			if err != nil {
-				log.Fatalf("unable to generate I2P Keys, %s", err)
-			}
-			keys := &tkeys
-			err = i2pkeys.StoreKeysIncompat(*keys, f)
-			if err != nil {
-				log.Fatalf("unable to save newly generated I2P Keys, %s", err)
-			}
-			return keys
-		} else {
-			tkeys, err := i2pkeys.LoadKeys(client.i2pkeys + ".stream.i2p.private")
-			if err != nil {
-				log.Fatalf("unable to load I2P Keys: %e", err)
-			}
-			keys := &tkeys
-			return keys
-		}
-	}
-	return &net.TCPAddr{IP: net.ParseIP(client.HostAddress()), Port: client.Port()}
-}*/
 
 // Internal disconnect function
 func (client *Client) disconnect(kicked bool) {

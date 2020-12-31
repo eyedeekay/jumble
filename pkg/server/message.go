@@ -1383,16 +1383,7 @@ func (server *Server) handleUserStatsMessage(client *Client, msg *Message) {
 		stats.Version = version
 		stats.CeltVersions = target.codecs
 		stats.Opus = proto.Bool(target.opus)
-		switch target.StreamAddr.(type) {
-		case *net.TCPAddr:
-			stats.Address = target.StreamAddr.(*net.TCPAddr).IP
-		case *net.UDPAddr:
-			stats.Address = target.StreamAddr.(*net.UDPAddr).IP
-		case i2pkeys.I2PAddr:
-			stats.Address = net.ParseIP("127.0.0.1")
-		case i2pkeys.I2PKeys:
-			stats.Address = net.ParseIP("127.0.0.1")
-		}
+		stats.Address = GetIP(target.StreamAddr)
 		//		stats.Address = target.StreamAddr.IP
 	}
 
