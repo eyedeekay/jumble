@@ -598,7 +598,7 @@ func (server *Server) handleUserStateMessage(client *Client, msg *Message) {
 			return
 		}
 
-		maxChannelUsers := server.cfg.IntValue("MaxChannelUsers")
+		maxChannelUsers := server.Config.IntValue("MaxChannelUsers")
 		if maxChannelUsers != 0 && len(dstChan.clients) >= maxChannelUsers {
 			client.sendPermissionDeniedFallback(mumbleproto.PermissionDenied_ChannelFull,
 				0x010201, "Channel is full")
@@ -658,7 +658,7 @@ func (server *Server) handleUserStateMessage(client *Client, msg *Message) {
 
 	// Texture change
 	if userstate.Texture != nil {
-		maximg := server.cfg.IntValue("MaxImageMessageLength")
+		maximg := server.Config.IntValue("MaxImageMessageLength")
 		if maximg > 0 && len(userstate.Texture) > maximg {
 			client.sendPermissionDeniedType(mumbleproto.PermissionDenied_TextTooLong)
 			return

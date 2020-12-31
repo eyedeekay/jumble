@@ -92,7 +92,7 @@ type Server struct {
 	clientAuthenticated chan *Client
 
 	// Server configuration
-	cfg *serverconf.Config
+	Config *serverconf.Config
 
 	// Clients
 	clients map[uint32]*Client
@@ -155,7 +155,7 @@ func NewAnonServer(id int64, datadir string) (s *Server, err error) {
 	s.datadir = datadir
 	s.i2pkeys = filepath.Join(datadir, "anonymous")
 
-	s.cfg = serverconf.New(nil)
+	s.Config = serverconf.New(nil)
 
 	s.Users = make(map[uint32]*User)
 	s.UserCertMap = make(map[string]*User)
@@ -181,7 +181,7 @@ func NewServer(id int64, datadir string) (s *Server, err error) {
 	s.Id = id
 	s.datadir = datadir
 
-	s.cfg = serverconf.New(nil)
+	s.Config = serverconf.New(nil)
 
 	s.Users = make(map[uint32]*User)
 	s.UserCertMap = make(map[string]*User)
@@ -229,7 +229,7 @@ func (server *Server) setConfigPassword(key, password string) {
 
 	// Could be racy, but shouldn't really matter...
 	val := "sha1$" + salt + "$" + digest
-	server.cfg.Set(key, val)
+	server.Config.Set(key, val)
 
 	if server.cfgUpdate != nil {
 		server.cfgUpdate <- &KeyValuePair{Key: key, Value: val}
@@ -247,7 +247,7 @@ func (server *Server) SetServerPassword(password string) {
 }
 
 func (server *Server) checkConfigPassword(key, password string) bool {
-	parts := strings.Split(server.cfg.StringValue(key), "$")
+	parts := strings.Split(server.Config.StringValue(key), "$")
 	if len(parts) != 3 {
 		return false
 	}
@@ -296,7 +296,7 @@ func (server *Server) CheckServerPassword(password string) bool {
 }
 
 func (server *Server) hasServerPassword() bool {
-	return server.cfg.StringValue("ServerPassword") != ""
+	return server.Config.StringValue("ServerPassword") != ""
 }
 
 // Called by the server to initiate a new client connection.
@@ -726,8 +726,8 @@ func (server *Server) finishAuthenticate(client *Client) {
 
 	sync := &mumbleproto.ServerSync{}
 	sync.Session = proto.Uint32(client.Session())
-	sync.MaxBandwidth = proto.Uint32(server.cfg.Uint32Value("MaxBandwidth"))
-	sync.WelcomeText = proto.String(server.cfg.StringValue("WelcomeText"))
+	sync.MaxBandwidth = proto.Uint32(server.Config.Uint32Value("MaxBandwidth"))
+	sync.WelcomeText = proto.String(server.Config.StringValue("WelcomeText"))
 	if client.IsSuperUser() {
 		sync.Permissions = proto.Uint64(uint64(acl.AllPermissions))
 	} else {
@@ -744,9 +744,9 @@ func (server *Server) finishAuthenticate(client *Client) {
 	}
 
 	err := client.sendMessage(&mumbleproto.ServerConfig{
-		AllowHtml:          proto.Bool(server.cfg.BoolValue("AllowHTML")),
-		MessageLength:      proto.Uint32(server.cfg.Uint32Value("MaxTextMessageLength")),
-		ImageMessageLength: proto.Uint32(server.cfg.Uint32Value("MaxImageMessageLength")),
+		AllowHtml:          proto.Bool(server.Config.BoolValue("AllowHTML")),
+		MessageLength:      proto.Uint32(server.Config.Uint32Value("MaxTextMessageLength")),
+		ImageMessageLength: proto.Uint32(server.Config.Uint32Value("MaxImageMessageLength")),
 	})
 	if err != nil {
 		client.Panicf("%v", err)
@@ -1055,8 +1055,8 @@ func (server *Server) udpListenLoop() {
 			_ = binary.Write(buffer, binary.BigEndian, uint32((1<<16)|(2<<8)|2))
 			_ = binary.Write(buffer, binary.BigEndian, rand)
 			_ = binary.Write(buffer, binary.BigEndian, uint32(len(server.clients)))
-			_ = binary.Write(buffer, binary.BigEndian, server.cfg.Uint32Value("MaxUsers"))
-			_ = binary.Write(buffer, binary.BigEndian, server.cfg.Uint32Value("MaxBandwidth"))
+			_ = binary.Write(buffer, binary.BigEndian, server.Config.Uint32Value("MaxUsers"))
+			_ = binary.Write(buffer, binary.BigEndian, server.Config.Uint32Value("MaxBandwidth"))
 
 			err = server.SendDatagram(buffer.Bytes(), PacketAddr)
 			if err != nil {
@@ -1339,9 +1339,9 @@ func (server *Server) IsCertHashBanned(hash string) bool {
 // Filter incoming text according to the server's current rules.
 func (server *Server) FilterText(text string) (filtered string, err error) {
 	options := &htmlfilter.Options{
-		StripHTML:             !server.cfg.BoolValue("AllowHTML"),
-		MaxTextMessageLength:  server.cfg.IntValue("MaxTextMessageLength"),
-		MaxImageMessageLength: server.cfg.IntValue("MaxImageMessageLength"),
+		StripHTML:             !server.Config.BoolValue("AllowHTML"),
+		MaxTextMessageLength:  server.Config.IntValue("MaxTextMessageLength"),
+		MaxImageMessageLength: server.Config.IntValue("MaxImageMessageLength"),
 	}
 	return htmlfilter.Filter(text, options)
 }
@@ -1426,7 +1426,7 @@ func (server *Server) cleanPerLaunchData() {
 // Port returns the port the native server will listen on when it is
 // started.
 func (server *Server) Port() int {
-	port := server.cfg.IntValue("Port")
+	port := server.Config.IntValue("Port")
 	if port == 0 {
 		return DefaultPort + int(server.Id) - 1
 	}
@@ -1436,13 +1436,13 @@ func (server *Server) Port() int {
 // ListenWebPort returns true if we should listen to the
 // web port, otherwise false
 func (server *Server) ListenWebPort() bool {
-	return !server.cfg.BoolValue("NoWebServer")
+	return !server.Config.BoolValue("NoWebServer")
 }
 
 // WebPort returns the port the web server will listen on when it is
 // started.
 func (server *Server) WebPort() int {
-	port := server.cfg.IntValue("WebPort")
+	port := server.Config.IntValue("WebPort")
 	if port == 0 {
 		return DefaultWebPort + int(server.Id) - 1
 	}
@@ -1457,14 +1457,14 @@ func (server *Server) CurrentPort() int {
 		return -1
 	}
 	if server.i2p {
-		return 64738
+		return DefaultPort
 	}
 	switch server.StreamListener.Addr().(type) {
 	case *net.TCPAddr:
 		StreamAddr := server.StreamListener.Addr().(*net.TCPAddr)
 		return StreamAddr.Port
 	default:
-		return 64738
+		return DefaultPort
 	}
 }
 
@@ -1472,8 +1472,11 @@ func (server *Server) CurrentPort() int {
 // it is started. This must be an IP address, either IPv4
 // or IPv6.
 func (server *Server) HostAddress() string {
-	host := server.cfg.StringValue("Address")
+	host := server.Config.StringValue("Address")
 	if host == "" {
+		if server.i2p {
+			return "127.0.0.1"
+		}
 		return "0.0.0.0"
 	}
 	return host
@@ -1777,5 +1780,5 @@ func (server *Server) Stop() (err error) {
 
 // Set will set a configuration value
 func (server *Server) Set(key string, value string) {
-	server.cfg.Set(key, value)
+	server.Config.Set(key, value)
 }

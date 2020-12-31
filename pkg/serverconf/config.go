@@ -20,6 +20,8 @@ var defaultCfg = map[string]string{
 	"RememberChannel":       "true",
 	"WelcomeText":           "Welcome to this server running <b>Grumble</b>.",
 	"SendVersion":           "true",
+	"I2P":                   "false",
+	"SAMApi":                "127.0.0.1:7656",
 }
 
 type Config struct {

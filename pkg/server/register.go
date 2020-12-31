@@ -39,16 +39,16 @@ const registerUrl = "https://mumble.info/register.cgi"
 // This function is used to determine whether or not to periodically
 // contact the master server list and update this server's metadata.
 func (server *Server) IsPublic() bool {
-	if len(server.cfg.StringValue("RegisterName")) == 0 {
+	if len(server.Config.StringValue("RegisterName")) == 0 {
 		return false
 	}
-	if len(server.cfg.StringValue("RegisterHost")) == 0 {
+	if len(server.Config.StringValue("RegisterHost")) == 0 {
 		return false
 	}
-	if len(server.cfg.StringValue("RegisterPassword")) == 0 {
+	if len(server.Config.StringValue("RegisterPassword")) == 0 {
 		return false
 	}
-	if len(server.cfg.StringValue("RegisterWebUrl")) == 0 {
+	if len(server.Config.StringValue("RegisterWebUrl")) == 0 {
 		return false
 	}
 	return true
@@ -80,11 +80,11 @@ func (server *Server) RegisterPublicServer() {
 
 	// Render registration XML template
 	reg := Register{
-		Name:     server.cfg.StringValue("RegisterName"),
-		Host:     server.cfg.StringValue("RegisterHost"),
-		Password: server.cfg.StringValue("RegisterPassword"),
-		Url:      server.cfg.StringValue("RegisterWebUrl"),
-		Location: server.cfg.StringValue("RegisterLocation"),
+		Name:     server.Config.StringValue("RegisterName"),
+		Host:     server.Config.StringValue("RegisterHost"),
+		Password: server.Config.StringValue("RegisterPassword"),
+		Url:      server.Config.StringValue("RegisterWebUrl"),
+		Location: server.Config.StringValue("RegisterLocation"),
 		Port:     server.CurrentPort(),
 		Digest:   digest,
 		Users:    len(server.clients),

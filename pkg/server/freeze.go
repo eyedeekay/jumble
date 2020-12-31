@@ -74,7 +74,7 @@ func (server *Server) Freeze() (fs *freezer.Server, err error) {
 	fs = new(freezer.Server)
 
 	// Freeze all config kv-pairs
-	allCfg := server.cfg.GetAll()
+	allCfg := server.Config.GetAll()
 	for k, v := range allCfg {
 		fs.Config = append(fs.Config, &freezer.ConfigKeyValuePair{
 			Key:   proto.String(k),
@@ -424,7 +424,7 @@ func NewServerFromFrozen(name, datadir string) (s *Server, err error) {
 	if err != nil {
 		return nil, err
 	}
-	s.cfg = serverconf.New(cfgMap)
+	s.Config = serverconf.New(cfgMap)
 
 	// Unfreeze the server's frozen bans.
 	s.UnfreezeBanList(fs.BanList)
@@ -641,10 +641,10 @@ func NewServerFromFrozen(name, datadir string) (s *Server, err error) {
 				if fcfg.Key != nil {
 					// It's an update operation
 					if fcfg.Value != nil {
-						s.cfg.Set(*fcfg.Key, *fcfg.Value)
+						s.Config.Set(*fcfg.Key, *fcfg.Value)
 						// It's a delete/reset operation.
 					} else {
-						s.cfg.Reset(*fcfg.Key)
+						s.Config.Reset(*fcfg.Key)
 					}
 				}
 			}
@@ -677,6 +677,8 @@ func NewServerFromFrozen(name, datadir string) (s *Server, err error) {
 			}
 		}
 	}
+
+	s.i2p = s.Config.BoolValue("I2P")
 
 	return s, nil
 }
