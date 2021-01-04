@@ -191,7 +191,7 @@ func main() {
 
 	// If no servers were found, create the default virtual server.
 	if len(servers) == 0 {
-		s, err := grumble.NewServer(1, Args.DataDir)
+		s, err := grumble.NewAnonServer(1, Args.DataDir)
 		if err != nil {
 			log.Fatalf("Couldn't start server: %s", err.Error())
 		}

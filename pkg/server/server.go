@@ -1497,8 +1497,12 @@ func (server *Server) HostAddress() string {
 
 func (server *Server) ListenDatagram(addr net.Addr) (net.PacketConn, error) {
 	switch addr.(type) {
-	case i2pkeys.I2PKeys:
+	case i2pkeys.I2PAddr:
 		return server.SAM.NewDatagramSession("mumble-i2p", addr.(i2pkeys.I2PKeys), sam3.Options_Humongous, 0)
+	case *i2pkeys.I2PKeys:
+		keys := addr.(*i2pkeys.I2PKeys)
+		newkeys := i2pkeys.NewKeys(keys.Addr(), keys.String())
+		return server.SAM.NewDatagramSession("mumble-i2p", newkeys, sam3.Options_Humongous, 0)
 	default:
 		return net.ListenUDP("udp", addr.(*net.UDPAddr))
 	}
@@ -1506,7 +1510,7 @@ func (server *Server) ListenDatagram(addr net.Addr) (net.PacketConn, error) {
 
 func (server *Server) ListenStream(addr net.Addr) (net.Listener, error) {
 	switch addr.(type) {
-	case i2pkeys.I2PKeys:
+	case *i2pkeys.I2PKeys:
 		return sam.I2PListener("mumble-web", "127.0.0.1:7656", "mumble-i2p")
 	default:
 		return net.ListenTCP("tcp", addr.(*net.TCPAddr))
