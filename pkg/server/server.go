@@ -63,13 +63,25 @@ type KeyValuePair struct {
 	Reset bool
 }
 
+func (s *Server) StreamListener() net.Listener {
+	return s.streamListener
+}
+
+func (s *Server) TLSStreamListener() net.Listener {
+	return s.tLSStreamListener
+}
+
+func (s *Server) DatagramConnection() net.PacketConn {
+	return s.datagramConnection
+}
+
 // A Murmur server instance
 type Server struct {
 	Id int64
 
-	StreamListener     net.Listener
-	TLSStreamListener  net.Listener
-	DatagramConnection net.PacketConn
+	streamListener     net.Listener
+	tLSStreamListener  net.Listener
+	datagramConnection net.PacketConn
 	TLSConfig          *tls.Config
 	WebSocketListener  *web.Listener
 	WebSocketTLSConfig *tls.Config
@@ -1017,7 +1029,7 @@ func (server *Server) handleIncomingMessage(client *Client, msg *Message) {
 
 // Send the content of buf as a UDP packet to addr.
 func (s *Server) SendDatagram(buf []byte, addr net.Addr) (err error) {
-	_, err = s.DatagramConnection.WriteTo(buf, addr)
+	_, err = s.DatagramConnection().WriteTo(buf, addr)
 	return
 }
 
@@ -1027,7 +1039,7 @@ func (server *Server) udpListenLoop() {
 
 	buf := make([]byte, UDPPacketSize)
 	for {
-		nread, remote, err := server.DatagramConnection.ReadFrom(buf)
+		nread, remote, err := server.DatagramConnection().ReadFrom(buf)
 		if err != nil {
 			if isTimeout(err) {
 				continue
@@ -1460,9 +1472,9 @@ func (server *Server) CurrentPort() int {
 	if server.i2p {
 		return DefaultPort
 	}
-	switch server.StreamListener.Addr().(type) {
+	switch server.StreamListener().Addr().(type) {
 	case *net.TCPAddr:
-		StreamAddr := server.StreamListener.Addr().(*net.TCPAddr)
+		StreamAddr := server.StreamListener().Addr().(*net.TCPAddr)
 		return StreamAddr.Port
 	default:
 		return DefaultPort
@@ -1596,11 +1608,18 @@ func (server *Server) Start() (err error) {
 	if server.running {
 		return errors.New("already running")
 	}
+	if server.i2p {
+		server.SAM, err = sam3.NewSAM("127.0.0.1:7656")
+		if err != nil {
+			return err
+		}
+	}
+
 	//webport := server.WebPort()
 	shouldListenWeb := server.ListenWebPort()
 
 	// Setup our UDP listener
-	server.DatagramConnection, err = server.ListenDatagram(server.DatagramAddr())
+	server.datagramConnection, err = server.ListenDatagram(server.DatagramAddr())
 	if err != nil {
 		return err
 	}
@@ -1612,12 +1631,12 @@ func (server *Server) Start() (err error) {
 	*/
 
 	// Set up our TCP connection
-	server.StreamListener, err = server.ListenStream(server.StreamAddr())
+	server.streamListener, err = server.ListenStream(server.StreamAddr())
 	if err != nil {
 		return err
 	}
 	/*
-		err = server.StreamListener.SetTimeout(1e9)
+		err = server.StreamListener().SetTimeout(1e9)
 		if err != nil {
 			return err
 		}
@@ -1634,7 +1653,7 @@ func (server *Server) Start() (err error) {
 		Certificates: []tls.Certificate{cert},
 		ClientAuth:   tls.RequestClientCert,
 	}
-	server.TLSStreamListener = tls.NewListener(server.StreamListener, server.TLSConfig)
+	server.tLSStreamListener = tls.NewListener(server.StreamListener(), server.TLSConfig)
 
 	if shouldListenWeb {
 		// Create HTTP server and WebSocket "listener"
@@ -1666,9 +1685,9 @@ func (server *Server) Start() (err error) {
 			}
 		}()
 
-		server.Printf("Started: listening on %v and %v", server.StreamListener.Addr(), server.WebSocketListener.Addr())
+		server.Printf("Started: listening on %v and %v", server.StreamListener().Addr(), server.WebSocketListener.Addr())
 	} else {
-		server.Printf("Started: listening on %v", server.StreamListener.Addr())
+		server.Printf("Started: listening on %v", server.StreamListener().Addr())
 	}
 
 	server.running = true
@@ -1700,7 +1719,7 @@ func (server *Server) Start() (err error) {
 
 	server.netwg.Add(numWG)
 	go server.udpListenLoop()
-	go server.acceptLoop(server.TLSStreamListener)
+	go server.acceptLoop(server.TLSStreamListener())
 	if shouldListenWeb {
 		go server.acceptLoop(server.WebSocketListener)
 	}
@@ -1749,13 +1768,13 @@ func (server *Server) Stop() (err error) {
 	}
 
 	// Close the listeners
-	err = server.TLSStreamListener.Close()
+	err = server.TLSStreamListener().Close()
 	if err != nil {
 		return err
 	}
 
 	// Close the UDP connection
-	err = server.DatagramConnection.Close()
+	err = server.DatagramConnection().Close()
 	if err != nil {
 		return err
 	}
