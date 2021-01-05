@@ -17,7 +17,6 @@ import (
 	"fmt"
 	"hash"
 	"log"
-	irand "math/rand"
 	"net"
 	"net/http"
 	"os"
@@ -1510,15 +1509,10 @@ func (server *Server) ListenDatagram(addr net.Addr) (net.PacketConn, error) {
 	}
 }
 
-func str() string {
-	irand.Seed(time.Now().UnixNano())
-	return fmt.Sprintf("%s", irand.Intn(1000)+100)
-}
-
 func (server *Server) ListenStream(addr net.Addr) (net.Listener, error) {
 	switch addr.(type) {
 	case *i2pkeys.I2PKeys:
-		path := server.i2pkeys + ".stream.i2p.private"
+		path := server.i2pkeys + ".stream"
 		return sam.I2PListener("mumble-stream", "127.0.0.1:7656", path)
 	default:
 		return net.ListenTCP("tcp", addr.(*net.TCPAddr))
@@ -1528,7 +1522,7 @@ func (server *Server) ListenStream(addr net.Addr) (net.Listener, error) {
 func (server *Server) ListenWeb(addr net.Addr) (net.Listener, error) {
 	switch addr.(type) {
 	case *i2pkeys.I2PKeys:
-		path := server.i2pkeys + ".web.i2p.private"
+		path := server.i2pkeys + ".web"
 		return sam.I2PListener("mumble-web", "127.0.0.1:7656", path)
 	default:
 		return net.ListenTCP("tcp", addr.(*net.TCPAddr))
@@ -1537,8 +1531,8 @@ func (server *Server) ListenWeb(addr net.Addr) (net.Listener, error) {
 
 func (server *Server) DatagramAddr() net.Addr {
 	if server.i2p {
-		if _, err := os.Stat(server.i2pkeys + ".datagram.i2p.private"); os.IsNotExist(err) {
-			f, err := os.Create(server.i2pkeys + ".datagram.i2p.private")
+		if _, err := os.Stat(server.i2pkeys + ".datagram.i2p.private.txt"); os.IsNotExist(err) {
+			f, err := os.Create(server.i2pkeys + ".datagram.i2p.private.txt")
 			if err != nil {
 				log.Fatalf("unable to open I2P keyfile for writing: %s", err)
 			}
@@ -1554,7 +1548,7 @@ func (server *Server) DatagramAddr() net.Addr {
 			}
 			return keys
 		} else {
-			tkeys, err := i2pkeys.LoadKeys(server.i2pkeys + ".datagram.i2p.private")
+			tkeys, err := i2pkeys.LoadKeys(server.i2pkeys + ".datagram.i2p.private.txt")
 			if err != nil {
 				log.Fatalf("unable to load I2P Keys: %e", err)
 			}
@@ -1567,8 +1561,8 @@ func (server *Server) DatagramAddr() net.Addr {
 
 func (server *Server) StreamAddr() net.Addr {
 	if server.i2p {
-		if _, err := os.Stat(server.i2pkeys + ".stream.i2p.private"); os.IsNotExist(err) {
-			f, err := os.Create(server.i2pkeys + ".stream.i2p.private")
+		if _, err := os.Stat(server.i2pkeys + ".stream.i2p.private.txt"); os.IsNotExist(err) {
+			f, err := os.Create(server.i2pkeys + ".stream.i2p.private.txt")
 			if err != nil {
 				log.Fatalf("unable to open I2P keyfile for writing: %s", err)
 			}
@@ -1584,7 +1578,7 @@ func (server *Server) StreamAddr() net.Addr {
 			}
 			return keys
 		} else {
-			tkeys, err := i2pkeys.LoadKeys(server.i2pkeys + ".stream.i2p.private")
+			tkeys, err := i2pkeys.LoadKeys(server.i2pkeys + ".stream.i2p.private.txt")
 			if err != nil {
 				log.Fatalf("unable to load I2P Keys: %e", err)
 			}
@@ -1596,10 +1590,9 @@ func (server *Server) StreamAddr() net.Addr {
 }
 
 func (server *Server) WebAddr() net.Addr {
-	log.Println("LOG", server.i2pkeys+".web.i2p.private")
 	if server.i2p {
-		if _, err := os.Stat(server.i2pkeys + ".web.i2p.private"); os.IsNotExist(err) {
-			f, err := os.Create(server.i2pkeys + ".web.i2p.private")
+		if _, err := os.Stat(server.i2pkeys + ".web.i2p.private.txt"); os.IsNotExist(err) {
+			f, err := os.Create(server.i2pkeys + ".web.i2p.private.txt")
 			if err != nil {
 				log.Fatalf("unable to open I2P keyfile for writing: %s", err)
 			}
@@ -1615,7 +1608,7 @@ func (server *Server) WebAddr() net.Addr {
 			}
 			return keys
 		} else {
-			tkeys, err := i2pkeys.LoadKeys(server.i2pkeys + ".web.i2p.private")
+			tkeys, err := i2pkeys.LoadKeys(server.i2pkeys + ".web.i2p.private.txt")
 			if err != nil {
 				log.Fatalf("unable to load I2P Keys: %e", err)
 			}
