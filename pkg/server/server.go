@@ -17,6 +17,7 @@ import (
 	"fmt"
 	"hash"
 	"log"
+	irand "math/rand"
 	"net"
 	"net/http"
 	"os"
@@ -82,6 +83,7 @@ type Server struct {
 	streamListener     net.Listener
 	tLSStreamListener  net.Listener
 	datagramConnection net.PacketConn
+	webListener        net.Listener
 	TLSConfig          *tls.Config
 	WebSocketListener  *web.Listener
 	WebSocketTLSConfig *tls.Config
@@ -1508,10 +1510,26 @@ func (server *Server) ListenDatagram(addr net.Addr) (net.PacketConn, error) {
 	}
 }
 
+func str() string {
+	irand.Seed(time.Now().UnixNano())
+	return fmt.Sprintf("%s", irand.Intn(1000)+100)
+}
+
 func (server *Server) ListenStream(addr net.Addr) (net.Listener, error) {
 	switch addr.(type) {
 	case *i2pkeys.I2PKeys:
-		return sam.I2PListener("mumble-web", "127.0.0.1:7656", "mumble-i2p")
+		path := server.i2pkeys + ".stream.i2p.private"
+		return sam.I2PListener("mumble-stream", "127.0.0.1:7656", path)
+	default:
+		return net.ListenTCP("tcp", addr.(*net.TCPAddr))
+	}
+}
+
+func (server *Server) ListenWeb(addr net.Addr) (net.Listener, error) {
+	switch addr.(type) {
+	case *i2pkeys.I2PKeys:
+		path := server.i2pkeys + ".web.i2p.private"
+		return sam.I2PListener("mumble-web", "127.0.0.1:7656", path)
 	default:
 		return net.ListenTCP("tcp", addr.(*net.TCPAddr))
 	}
@@ -1578,6 +1596,7 @@ func (server *Server) StreamAddr() net.Addr {
 }
 
 func (server *Server) WebAddr() net.Addr {
+	log.Println("LOG", server.i2pkeys+".web.i2p.private")
 	if server.i2p {
 		if _, err := os.Stat(server.i2pkeys + ".web.i2p.private"); os.IsNotExist(err) {
 			f, err := os.Create(server.i2pkeys + ".web.i2p.private")
@@ -1639,6 +1658,11 @@ func (server *Server) Start() (err error) {
 	if err != nil {
 		return err
 	}
+
+	server.webListener, err = server.ListenWeb(server.WebAddr())
+	if err != nil {
+		return err
+	}
 	/*
 		err = server.StreamListener().SetTimeout(1e9)
 		if err != nil {
@@ -1683,7 +1707,7 @@ func (server *Server) Start() (err error) {
 			IdleTimeout:  2 * time.Minute,
 		}
 		go func() {
-			err := server.WebServer.ListenAndServeTLS("", "")
+			err := server.WebServer.ServeTLS(server.webListener, "", "")
 			if err != http.ErrServerClosed {
 				server.Fatalf("Fatal HTTP server error: %v", err)
 			}
