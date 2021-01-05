@@ -1547,7 +1547,7 @@ func (server *Server) DatagramAddr() net.Addr {
 			if err != nil {
 				log.Fatalf("unable to save newly generated I2P Keys, %s", err)
 			}
-			err = ioutil.WriteFile(server.i2pkeys+"datagram.i2p.public.txt", []byte(keys.Addr().Base32()), 0644)
+			err = ioutil.WriteFile(server.i2pkeys+".datagram.i2p.public.txt", []byte(keys.Addr().Base32()), 0644)
 			if err != nil {
 				log.Fatalf("error storing I2P base32 address in adjacent text file, %s", err)
 			}
@@ -1558,7 +1558,7 @@ func (server *Server) DatagramAddr() net.Addr {
 				log.Fatalf("unable to load I2P Keys: %e", err)
 			}
 			keys := &tkeys
-			err = ioutil.WriteFile(server.i2pkeys+"datagram.i2p.public.txt", []byte(keys.Addr().Base32()), 0644)
+			err = ioutil.WriteFile(server.i2pkeys+".datagram.i2p.public.txt", []byte(keys.Addr().Base32()), 0644)
 			if err != nil {
 				log.Fatalf("error storing I2P base32 address in adjacent text file, %s", err)
 			}
@@ -1566,6 +1566,10 @@ func (server *Server) DatagramAddr() net.Addr {
 		}
 	}
 	return &net.UDPAddr{IP: net.ParseIP(server.HostAddress()), Port: server.Port()}
+}
+
+func (server *Server) StreamAddrString() string {
+	return server.StreamAddr().(*i2pkeys.I2PKeys).Addr().Base32()
 }
 
 func (server *Server) StreamAddr() net.Addr {
@@ -1596,6 +1600,10 @@ func (server *Server) StreamAddr() net.Addr {
 		}
 	}
 	return &net.TCPAddr{IP: net.ParseIP(server.HostAddress()), Port: server.Port()}
+}
+
+func (server *Server) WebAddrString() string {
+	return server.WebAddr().(*i2pkeys.I2PKeys).Addr().Base32()
 }
 
 func (server *Server) WebAddr() net.Addr {
@@ -1633,6 +1641,7 @@ func (server *Server) Start() (err error) {
 	if server.running {
 		return errors.New("already running")
 	}
+
 	if server.i2p {
 		server.SAM, err = sam3.NewSAM("127.0.0.1:7656")
 		if err != nil {
@@ -1640,7 +1649,6 @@ func (server *Server) Start() (err error) {
 		}
 	}
 
-	//webport := server.WebPort()
 	shouldListenWeb := server.ListenWebPort()
 
 	// Setup our UDP listener
@@ -1696,7 +1704,7 @@ func (server *Server) Start() (err error) {
 		mux := http.NewServeMux()
 		mux.Handle("/", server.WebSocketListener)
 		server.WebServer = &http.Server{
-			Addr:      server.WebAddr().String(),
+			Addr:      server.WebAddrString(),
 			Handler:   mux,
 			TLSConfig: server.WebSocketTLSConfig,
 			ErrorLog:  server.Logger,
