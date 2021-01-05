@@ -1602,8 +1602,23 @@ func (server *Server) StreamAddr() net.Addr {
 	return &net.TCPAddr{IP: net.ParseIP(server.HostAddress()), Port: server.Port()}
 }
 
+
+func (server *Server) TLSAddrString() string {
+	switch server.WebAddr().(type) {
+	case *i2pkeys.I2PKeys:
+  	return server.WebAddr().(*i2pkeys.I2PKeys).Addr().Base32()
+	default:
+		return server.WebAddr().String()
+	}
+}
+
 func (server *Server) WebAddrString() string {
-	return server.WebAddr().(*i2pkeys.I2PKeys).Addr().Base32()
+	switch server.WebAddr().(type) {
+	case *i2pkeys.I2PKeys:
+  	return server.StreamAddr().(*i2pkeys.I2PKeys).Addr().Base32()
+	default:
+		return server.StreamAddr().String()
+	}
 }
 
 func (server *Server) WebAddr() net.Addr {
@@ -1690,6 +1705,7 @@ func (server *Server) Start() (err error) {
 	server.TLSConfig = &tls.Config{
 		Certificates: []tls.Certificate{cert},
 		ClientAuth:   tls.RequestClientCert,
+		ServerName: server.TLSAddrString(),
 	}
 	server.tLSStreamListener = tls.NewListener(server.StreamListener(), server.TLSConfig)
 
@@ -1699,6 +1715,7 @@ func (server *Server) Start() (err error) {
 			Certificates: []tls.Certificate{cert},
 			ClientAuth:   tls.NoClientCert,
 			NextProtos:   []string{"http/1.1"},
+  		ServerName: server.WebAddrString(),
 		}
 		server.WebSocketListener = web.NewListener(server.WebAddr(), server.Logger)
 		mux := http.NewServeMux()
