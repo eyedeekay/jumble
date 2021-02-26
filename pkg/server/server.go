@@ -1535,7 +1535,7 @@ func (server *Server) ListenWeb(addr net.Addr) (net.Listener, error) {
 
 func (server *Server) DatagramAddrString() string {
 	if server.i2p {
-		return server.SAM.Addr().String()
+		return server.SAM.Addr().Base32()
 	}
 	return server.DatagramAddr().String()
 }
@@ -1549,14 +1549,14 @@ func (server *Server) DatagramAddr() net.Addr {
 
 func (server *Server) StreamAddrString() string {
 	if server.i2p {
-		return server.SAM.Addr().String()
+		return server.SAM.Addr().Base32()
 	}
 	return server.StreamAddr().String()
 }
 
 func (server *Server) TLSAddrString() string {
 	if server.i2p {
-		return server.SAM.Addr().String()
+		return server.SAM.Addr().Base32()
 	}
 	return server.StreamAddr().String()
 }
@@ -1570,7 +1570,7 @@ func (server *Server) StreamAddr() net.Addr {
 
 func (server *Server) WebAddrString() string {
 	if server.i2p {
-		return server.SAM.Addr().String()
+		return server.SAM.Addr().Base32()
 	}
 	return server.WebAddr().String()
 }
