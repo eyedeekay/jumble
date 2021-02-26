@@ -27,7 +27,6 @@ import (
 	"time"
 
 	"github.com/eyedeekay/sam3"
-	"github.com/eyedeekay/sam3/helper"
 	"github.com/eyedeekay/sam3/i2pkeys"
 
 	"github.com/eyedeekay/jumble/pkg/acl"
@@ -1502,9 +1501,7 @@ func (server *Server) HostAddress() string {
 func (server *Server) ListenDatagram(addr net.Addr) (net.PacketConn, error) {
 	switch addr.(type) {
 	case i2pkeys.I2PAddr:
-		return server.SAM.NewDatagramSubSession("mumble-i2p", 0)
-	case *i2pkeys.I2PKeys:
-		return server.SAM.NewDatagramSubSession("mumble-i2p", 0)
+		return server.SAM.NewDatagramSubSession("mumble-i2p-"+sam3.RandString(), 0)
 	default:
 		return net.ListenUDP("udp", addr.(*net.UDPAddr))
 	}
@@ -1512,9 +1509,12 @@ func (server *Server) ListenDatagram(addr net.Addr) (net.PacketConn, error) {
 
 func (server *Server) ListenStream(addr net.Addr) (net.Listener, error) {
 	switch addr.(type) {
-	case *i2pkeys.I2PKeys:
-		path := server.i2pkeys + ".stream"
-		return sam.I2PListener("mumble-stream", "127.0.0.1:7656", path)
+	case i2pkeys.I2PAddr:
+		listener, err := server.SAM.NewStreamSubSessionWithPorts("mumble-stream-"+sam3.RandString(), "44445", "0")
+		if err != nil {
+			return nil, err
+		}
+		return listener.Listen()
 	default:
 		return net.ListenTCP("tcp", addr.(*net.TCPAddr))
 	}
@@ -1522,9 +1522,12 @@ func (server *Server) ListenStream(addr net.Addr) (net.Listener, error) {
 
 func (server *Server) ListenWeb(addr net.Addr) (net.Listener, error) {
 	switch addr.(type) {
-	case *i2pkeys.I2PKeys:
-		path := server.i2pkeys + ".web"
-		return sam.I2PListener("mumble-web", "127.0.0.1:7656", path)
+	case i2pkeys.I2PAddr:
+		listener, err := server.SAM.NewStreamSubSessionWithPorts("mumble-web-"+sam3.RandString(), "44444", "0")
+		if err != nil {
+			return nil, err
+		}
+		return listener.Listen()
 	default:
 		return net.ListenTCP("tcp", addr.(*net.TCPAddr))
 	}
@@ -1615,7 +1618,7 @@ func (server *Server) Start() (err error) {
 			}
 		}
 
-		server.SAM, err = server.sam.NewPrimarySession("mumble-primary", tkeys, sam3.Options_Medium)
+		server.SAM, err = server.sam.NewPrimarySession("mumble-primary-"+sam3.RandString(), tkeys, sam3.Options_Medium)
 		if err != nil {
 			return err
 		}
