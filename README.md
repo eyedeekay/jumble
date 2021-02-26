@@ -32,7 +32,7 @@ Base32 addresses can be found in the config directory:
 
 **Streaming(TLS) address:** `~/.grumble/anonymous.stream.i2p.public.txt`
 
-**Datagram(WebSocket) address:** `~/.grumble/anonymous.web.i2p.public.txt`
+**Streaming(WebSocket) address:** `~/.grumble/anonymous.web.i2p.public.txt`
 
 You can use these addresses to configure your Mumble clients.
 

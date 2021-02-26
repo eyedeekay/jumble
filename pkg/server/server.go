@@ -16,7 +16,7 @@ import (
 	"errors"
 	"fmt"
 	"hash"
-	"io/ioutil"
+	//	"io/ioutil"
 	"log"
 	"net"
 	"net/http"
@@ -88,9 +88,11 @@ type Server struct {
 	WebSocketListener  *web.Listener
 	WebSocketTLSConfig *tls.Config
 	WebServer          *http.Server
-	SAM                *sam3.SAM
-	i2p                bool
-	i2pkeys            string
+	//SAM                *sam3.SAM
+	sam     *sam3.SAM
+	SAM     *sam3.PrimarySession
+	i2p     bool
+	i2pkeys string
 
 	bye     chan bool
 	netwg   sync.WaitGroup
@@ -1500,11 +1502,9 @@ func (server *Server) HostAddress() string {
 func (server *Server) ListenDatagram(addr net.Addr) (net.PacketConn, error) {
 	switch addr.(type) {
 	case i2pkeys.I2PAddr:
-		return server.SAM.NewDatagramSession("mumble-i2p", addr.(i2pkeys.I2PKeys), sam3.Options_Humongous, 0)
+		return server.SAM.NewDatagramSubSession("mumble-i2p", 0)
 	case *i2pkeys.I2PKeys:
-		keys := addr.(*i2pkeys.I2PKeys)
-		newkeys := i2pkeys.NewKeys(keys.Addr(), keys.String())
-		return server.SAM.NewDatagramSession("mumble-i2p", newkeys, sam3.Options_Humongous, 0)
+		return server.SAM.NewDatagramSubSession("mumble-i2p", 0)
 	default:
 		return net.ListenUDP("udp", addr.(*net.UDPAddr))
 	}
@@ -1530,123 +1530,51 @@ func (server *Server) ListenWeb(addr net.Addr) (net.Listener, error) {
 	}
 }
 
+func (server *Server) DatagramAddrString() string {
+	if server.i2p {
+		return server.SAM.Addr().String()
+	}
+	return server.DatagramAddr().String()
+}
+
 func (server *Server) DatagramAddr() net.Addr {
 	if server.i2p {
-		if _, err := os.Stat(server.i2pkeys + ".datagram.i2p.private"); os.IsNotExist(err) {
-			f, err := os.Create(server.i2pkeys + ".datagram.i2p.private")
-			if err != nil {
-				log.Fatalf("unable to open I2P keyfile for writing: %s", err)
-			}
-			defer f.Close()
-			tkeys, err := server.SAM.NewKeys()
-			if err != nil {
-				log.Fatalf("unable to generate I2P Keys, %s", err)
-			}
-			keys := &tkeys
-			err = i2pkeys.StoreKeysIncompat(*keys, f)
-			if err != nil {
-				log.Fatalf("unable to save newly generated I2P Keys, %s", err)
-			}
-			err = ioutil.WriteFile(server.i2pkeys+".datagram.i2p.public.txt", []byte(keys.Addr().Base32()), 0644)
-			if err != nil {
-				log.Fatalf("error storing I2P base32 address in adjacent text file, %s", err)
-			}
-			return keys
-		} else {
-			tkeys, err := i2pkeys.LoadKeys(server.i2pkeys + ".datagram.i2p.private")
-			if err != nil {
-				log.Fatalf("unable to load I2P Keys: %e", err)
-			}
-			keys := &tkeys
-			err = ioutil.WriteFile(server.i2pkeys+".datagram.i2p.public.txt", []byte(keys.Addr().Base32()), 0644)
-			if err != nil {
-				log.Fatalf("error storing I2P base32 address in adjacent text file, %s", err)
-			}
-			return keys
-		}
+		return server.SAM.Addr()
 	}
 	return &net.UDPAddr{IP: net.ParseIP(server.HostAddress()), Port: server.Port()}
 }
 
 func (server *Server) StreamAddrString() string {
-	return server.StreamAddr().(*i2pkeys.I2PKeys).Addr().Base32()
+	if server.i2p {
+		return server.SAM.Addr().String()
+	}
+	return server.StreamAddr().String()
+}
+
+func (server *Server) TLSAddrString() string {
+	if server.i2p {
+		return server.SAM.Addr().String()
+	}
+	return server.StreamAddr().String()
 }
 
 func (server *Server) StreamAddr() net.Addr {
 	if server.i2p {
-		if _, err := os.Stat(server.i2pkeys + ".stream.i2p.private"); os.IsNotExist(err) {
-			f, err := os.Create(server.i2pkeys + ".stream.i2p.private")
-			if err != nil {
-				log.Fatalf("unable to open I2P keyfile for writing: %s", err)
-			}
-			defer f.Close()
-			tkeys, err := server.SAM.NewKeys()
-			if err != nil {
-				log.Fatalf("unable to generate I2P Keys, %s", err)
-			}
-			keys := &tkeys
-			err = i2pkeys.StoreKeysIncompat(*keys, f)
-			if err != nil {
-				log.Fatalf("unable to save newly generated I2P Keys, %s", err)
-			}
-			return keys
-		} else {
-			tkeys, err := i2pkeys.LoadKeys(server.i2pkeys + ".stream.i2p.private")
-			if err != nil {
-				log.Fatalf("unable to load I2P Keys: %e", err)
-			}
-			keys := &tkeys
-			return keys
-		}
+		return server.SAM.Addr()
 	}
 	return &net.TCPAddr{IP: net.ParseIP(server.HostAddress()), Port: server.Port()}
 }
 
-
-func (server *Server) TLSAddrString() string {
-	switch server.WebAddr().(type) {
-	case *i2pkeys.I2PKeys:
-  	return server.WebAddr().(*i2pkeys.I2PKeys).Addr().Base32()
-	default:
-		return server.WebAddr().String()
-	}
-}
-
 func (server *Server) WebAddrString() string {
-	switch server.WebAddr().(type) {
-	case *i2pkeys.I2PKeys:
-  	return server.StreamAddr().(*i2pkeys.I2PKeys).Addr().Base32()
-	default:
-		return server.StreamAddr().String()
+	if server.i2p {
+		return server.SAM.Addr().String()
 	}
+	return server.WebAddr().String()
 }
 
 func (server *Server) WebAddr() net.Addr {
 	if server.i2p {
-		if _, err := os.Stat(server.i2pkeys + ".web.i2p.private"); os.IsNotExist(err) {
-			f, err := os.Create(server.i2pkeys + ".web.i2p.private")
-			if err != nil {
-				log.Fatalf("unable to open I2P keyfile for writing: %s", err)
-			}
-			defer f.Close()
-			tkeys, err := server.SAM.NewKeys()
-			if err != nil {
-				log.Fatalf("unable to generate I2P Keys, %s", err)
-			}
-			keys := &tkeys
-			err = i2pkeys.StoreKeysIncompat(*keys, f)
-			if err != nil {
-				log.Fatalf("unable to save newly generated I2P Keys, %s", err)
-			}
-			return keys
-		} else {
-			tkeys, err := i2pkeys.LoadKeys(server.i2pkeys + ".web.i2p.private")
-			if err != nil {
-				log.Fatalf("unable to load I2P Keys: %e", err)
-			}
-			keys := &tkeys
-			return keys
-		}
+		return server.SAM.Addr()
 	}
 	return &net.TCPAddr{IP: net.ParseIP(server.HostAddress()), Port: server.Port()}
 }
@@ -1658,7 +1586,36 @@ func (server *Server) Start() (err error) {
 	}
 
 	if server.i2p {
-		server.SAM, err = sam3.NewSAM("127.0.0.1:7656")
+		server.sam, err = sam3.NewSAM("127.0.0.1:7656")
+		if err != nil {
+			return err
+		}
+
+		var tkeys i2pkeys.I2PKeys
+
+		if _, err := os.Stat(server.i2pkeys + "i2p.private"); os.IsNotExist(err) {
+			f, err := os.Create(server.i2pkeys + "i2p.private")
+			if err != nil {
+				log.Fatalf("unable to open I2P keyfile for writing: %s", err)
+			}
+			defer f.Close()
+			tkeys, err = server.sam.NewKeys()
+			if err != nil {
+				log.Fatalf("unable to generate I2P Keys, %s", err)
+			}
+			keys := &tkeys
+			err = i2pkeys.StoreKeysIncompat(*keys, f)
+			if err != nil {
+				log.Fatalf("unable to save newly generated I2P Keys, %s", err)
+			}
+		} else {
+			tkeys, err = i2pkeys.LoadKeys(server.i2pkeys + "i2p.private")
+			if err != nil {
+				log.Fatalf("unable to load I2P Keys: %e", err)
+			}
+		}
+
+		server.SAM, err = server.sam.NewPrimarySession("mumble-primary", tkeys, sam3.Options_Medium)
 		if err != nil {
 			return err
 		}
@@ -1705,7 +1662,7 @@ func (server *Server) Start() (err error) {
 	server.TLSConfig = &tls.Config{
 		Certificates: []tls.Certificate{cert},
 		ClientAuth:   tls.RequestClientCert,
-		ServerName: server.TLSAddrString(),
+		ServerName:   server.TLSAddrString(),
 	}
 	server.tLSStreamListener = tls.NewListener(server.StreamListener(), server.TLSConfig)
 
@@ -1715,7 +1672,7 @@ func (server *Server) Start() (err error) {
 			Certificates: []tls.Certificate{cert},
 			ClientAuth:   tls.NoClientCert,
 			NextProtos:   []string{"http/1.1"},
-  		ServerName: server.WebAddrString(),
+			ServerName:   server.WebAddrString(),
 		}
 		server.WebSocketListener = web.NewListener(server.WebAddr(), server.Logger)
 		mux := http.NewServeMux()
