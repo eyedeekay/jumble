@@ -16,7 +16,7 @@ import (
 	"errors"
 	"fmt"
 	"hash"
-	//	"io/ioutil"
+	"io/ioutil"
 	"log"
 	"net"
 	"net/http"
@@ -1523,7 +1523,7 @@ func (server *Server) ListenStream(addr net.Addr) (net.Listener, error) {
 func (server *Server) ListenWeb(addr net.Addr) (net.Listener, error) {
 	switch addr.(type) {
 	case i2pkeys.I2PAddr:
-		listener, err := server.SAM.NewStreamSubSessionWithPorts("mumble-web-"+sam3.RandString(), "44444", "0")
+		listener, err := server.SAM.NewStreamSubSession("mumble-web-" + sam3.RandString())
 		if err != nil {
 			return nil, err
 		}
@@ -1596,28 +1596,31 @@ func (server *Server) Start() (err error) {
 
 		var tkeys i2pkeys.I2PKeys
 
-		if _, err := os.Stat(server.i2pkeys + "i2p.private"); os.IsNotExist(err) {
-			f, err := os.Create(server.i2pkeys + "i2p.private")
+		if _, err := os.Stat(server.i2pkeys + ".i2p.private"); os.IsNotExist(err) {
+			f, err := os.Create(server.i2pkeys + ".i2p.private")
 			if err != nil {
-				log.Fatalf("unable to open I2P keyfile for writing: %s", err)
+				return err
 			}
 			defer f.Close()
 			tkeys, err = server.sam.NewKeys()
 			if err != nil {
-				log.Fatalf("unable to generate I2P Keys, %s", err)
+				return err
 			}
 			keys := &tkeys
 			err = i2pkeys.StoreKeysIncompat(*keys, f)
 			if err != nil {
-				log.Fatalf("unable to save newly generated I2P Keys, %s", err)
+				return err
 			}
 		} else {
-			tkeys, err = i2pkeys.LoadKeys(server.i2pkeys + "i2p.private")
+			tkeys, err = i2pkeys.LoadKeys(server.i2pkeys + ".i2p.private")
 			if err != nil {
-				log.Fatalf("unable to load I2P Keys: %e", err)
+				return err
 			}
 		}
-
+		ioutil.WriteFile(server.i2pkeys+".i2p.public", []byte(tkeys.Addr().Base32()), 0644)
+		if err != nil {
+			return err
+		}
 		server.SAM, err = server.sam.NewPrimarySession("mumble-primary-"+sam3.RandString(), tkeys, sam3.Options_Medium)
 		if err != nil {
 			return err
