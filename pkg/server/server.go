@@ -1051,10 +1051,27 @@ func (server *Server) udpListenLoop() {
 			}
 		}
 
-		PacketAddr, ok := remote.(*net.UDPAddr)
-		if !ok {
-			server.Printf("No UDPAddr in read packet. Disabling UDP. (Windows?)")
-			return
+		var PacketAddr net.Addr
+		var ok = false
+		switch remote.(type) {
+		case *net.UDPAddr:
+			PacketAddr, ok = remote.(*net.UDPAddr)
+			if !ok {
+				server.Printf("No UDPAddr in read packet. Disabling UDP. (Windows?)")
+				return
+			}
+		case *i2pkeys.I2PAddr:
+			PacketAddr, ok = remote.(*i2pkeys.I2PAddr)
+			if !ok {
+				server.Printf("No *I2PAddr in read packet. Disabling UDP. (Windows?)")
+				return
+			}
+		case i2pkeys.I2PAddr:
+			PacketAddr, ok = remote.(i2pkeys.I2PAddr)
+			if !ok {
+				server.Printf("No I2PAddr in read packet. Disabling UDP. (Windows?)")
+				return
+			}
 		}
 
 		// Length 12 is for ping datagrams from the ConnectDialog.
@@ -1085,7 +1102,7 @@ func (server *Server) udpListenLoop() {
 	}
 }
 
-func (server *Server) handleUdpPacket(PacketAddr *net.UDPAddr, buf []byte) {
+func (server *Server) handleUdpPacket(PacketAddr net.Addr, buf []byte) {
 	var match *Client
 	plain := make([]byte, len(buf))
 
@@ -1107,7 +1124,7 @@ func (server *Server) handleUdpPacket(PacketAddr *net.UDPAddr, buf []byte) {
 		}
 		match = client
 	} else {
-		host := PacketAddr.IP.String()
+		host := PacketAddr.String() //IP.String()
 		hostclients := server.hclients[host]
 		for _, client := range hostclients {
 			err := client.crypt.Decrypt(plain[0:], buf)
