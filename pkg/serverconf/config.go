@@ -22,6 +22,7 @@ var defaultCfg = map[string]string{
 	"SendVersion":           "true",
 	"I2P":                   "false",
 	"SAMApi":                "127.0.0.1:7656",
+	"NoWebServer":           "true",
 }
 
 type Config struct {

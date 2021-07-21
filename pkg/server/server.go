@@ -1518,6 +1518,7 @@ func (server *Server) HostAddress() string {
 func (server *Server) ListenDatagram(addr net.Addr) (net.PacketConn, error) {
 	switch addr.(type) {
 	case i2pkeys.I2PAddr:
+		log.Println("Listening on I2P Datagrams")
 		return server.SAM.NewDatagramSubSession("mumble-i2p-"+sam3.RandString(), 0)
 	default:
 		return net.ListenUDP("udp", addr.(*net.UDPAddr))
@@ -1527,6 +1528,7 @@ func (server *Server) ListenDatagram(addr net.Addr) (net.PacketConn, error) {
 func (server *Server) ListenStream(addr net.Addr) (net.Listener, error) {
 	switch addr.(type) {
 	case i2pkeys.I2PAddr:
+		log.Println("Listening on I2P Streaming")
 		listener, err := server.SAM.NewStreamSubSessionWithPorts("mumble-stream-"+sam3.RandString(), "44445", "0")
 		if err != nil {
 			return nil, err
@@ -1540,6 +1542,7 @@ func (server *Server) ListenStream(addr net.Addr) (net.Listener, error) {
 func (server *Server) ListenWeb(addr net.Addr) (net.Listener, error) {
 	switch addr.(type) {
 	case i2pkeys.I2PAddr:
+		log.Println("Listening on I2P WebSocket")
 		listener, err := server.SAM.NewStreamSubSession("mumble-web-" + sam3.RandString())
 		if err != nil {
 			return nil, err
@@ -1651,12 +1654,6 @@ func (server *Server) Start() (err error) {
 	if err != nil {
 		return err
 	}
-	/*
-		err = server.DatagramConnection.SetReadTimeout(1e9)
-		if err != nil {
-			return err
-		}
-	*/
 
 	// Set up our TCP connection
 	server.streamListener, err = server.ListenStream(server.StreamAddr())
@@ -1664,16 +1661,12 @@ func (server *Server) Start() (err error) {
 		return err
 	}
 
-	server.webListener, err = server.ListenWeb(server.WebAddr())
-	if err != nil {
-		return err
-	}
-	/*
-		err = server.StreamListener().SetTimeout(1e9)
+	if shouldListenWeb {
+		server.webListener, err = server.ListenWeb(server.WebAddr())
 		if err != nil {
 			return err
 		}
-	*/
+	}
 
 	// Wrap a TLS listener around the TCP connection
 	certFn := filepath.Join(server.datadir, "cert.pem")
@@ -1709,8 +1702,8 @@ func (server *Server) Start() (err error) {
 			// Set sensible timeouts, in case no reverse proxy is in front of Grumble.
 			// Non-conforming (or malicious) clients may otherwise block indefinitely and cause
 			// file descriptors (or handles, depending on your OS) to leak and/or be exhausted
-			ReadTimeout:  30 * time.Second,
-			WriteTimeout: 40 * time.Second,
+			ReadTimeout:  60 * time.Second,
+			WriteTimeout: 80 * time.Second,
 			IdleTimeout:  2 * time.Minute,
 		}
 		go func() {
