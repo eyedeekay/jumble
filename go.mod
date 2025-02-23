@@ -2,7 +2,7 @@ module github.com/eyedeekay/jumble
 
 go 1.15
 
-replace github.com/mumble-voip/grumble v0.0.0-20200416032001-6f8c2bf2f51f => github.com/eyedeekay/grumble v0.0.0-20201227041312-50b7729bd8a5
+//replace github.com/mumble-voip/grumble => github.com/eyedeekay/grumble v0.0.0-20201227041312-50b7729bd8a5
 
 require (
 	github.com/go-i2p/i2pkeys v0.33.92
