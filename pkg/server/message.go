@@ -11,7 +11,7 @@ import (
 	"net"
 	"time"
 
-	"github.com/eyedeekay/sam3/i2pkeys"
+	"github.com/go-i2p/i2pkeys"
 
 	"github.com/eyedeekay/jumble/pkg/acl"
 	"github.com/eyedeekay/jumble/pkg/ban"

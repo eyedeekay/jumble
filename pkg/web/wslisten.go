@@ -13,7 +13,7 @@ import (
 	"time"
 
 	"github.com/gorilla/websocket"
-	//	"github.com/eyedeekay/sam3/i2pkeys"
+	//	"github.com/go-i2p/i2pkeys"
 )
 
 var upgrader = websocket.Upgrader{

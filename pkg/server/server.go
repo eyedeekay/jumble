@@ -26,8 +26,8 @@ import (
 	"sync"
 	"time"
 
-	"github.com/eyedeekay/sam3"
-	"github.com/eyedeekay/sam3/i2pkeys"
+	"github.com/go-i2p/i2pkeys"
+	"github.com/go-i2p/sam3"
 
 	"github.com/eyedeekay/jumble/pkg/acl"
 	"github.com/eyedeekay/jumble/pkg/ban"
